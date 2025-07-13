@@ -19,10 +19,6 @@ config.env
 public/js/bundle.js
 public/js/bundle.js.map
 
-# Uploaded files
-public/img/users/*
-!public/img/users/default.jpg
-# public/img/tours/*  <!-- Temporarily commented out for demo -->
 
 # OS generated files
 .DS_Store
