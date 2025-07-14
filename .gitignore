@@ -16,8 +16,8 @@ config.env
 # Parcel build files
 .cache/
 .parcel-cache/
-public/js/bundle.js
-public/js/bundle.js.map
+# public/js/bundle.js      <!-- Commented out for production -->
+# public/js/bundle.js.map  <!-- Commented out for production -->
 
 
 # OS generated files
