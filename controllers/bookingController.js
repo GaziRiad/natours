@@ -49,7 +49,7 @@ const webhookChekout = async (req, res, next) => {
       process.env.STRIPE_WEBHOOK_SECRET,
     );
 
-    if (event.type === "checkout.session.complete") {
+    if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const user = await User.findOne({ email: session.customer_email });
 
