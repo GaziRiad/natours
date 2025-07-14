@@ -1,6 +1,7 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const Booking = require("../models/bookingModel");
 const Tour = require("../models/tourModel");
+const User = require("../models/userModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const factory = require("../utils/handleFactory");
@@ -16,7 +17,7 @@ const getCheckoutSession = catchAsync(async (req, res, next) => {
     mode: "payment",
     customer_email: req.user.email,
     client_reference_id: req.params.tourId,
-    success_url: `${req.protocol}://${req.get("host")}/?tour=${req.params.tourId}&user=${req.user.id}&price=${tour.price}`,
+    success_url: `${req.protocol}://${req.get("host")}/my-tours`,
     cancel_url: `${req.protocol}://${req.get("host")}/tours/${tour.slug}`,
     line_items: [
       {
@@ -38,20 +39,32 @@ const getCheckoutSession = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: "success", session });
 });
 
-const createBookingCheckout = catchAsync(async (req, res, next) => {
-  // THIS is only TEMPORARY, bcs it's UNSECURE: everyone can make bookings without paying
-  const { tour, user, price } = req.query;
+const webhookChekout = async (req, res, next) => {
+  const signature = req.headers["stripe-signature"];
 
-  if (!tour || !user || !price) return next();
+  try {
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET,
+    );
 
-  await Booking.create({
-    price,
-    tour,
-    user,
-  });
+    if (event.type === "checkout.session.complete") {
+      const session = event.data.object;
+      const user = await User.findOne({ email: session.customer_email });
 
-  res.redirect(req.originalUrl.split("?")[0]);
-});
+      await Booking.create({
+        tour: session.client_reference_id,
+        user: user.id,
+        price: session.line_items[0].price_data.unit_amount / 100,
+      });
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    return res.status(400).send(`Webhook error: ${err.message}`);
+  }
+};
 
 const getAllBookings = factory.getAll(Booking);
 const getBooking = factory.getOne(Booking);
@@ -61,10 +74,10 @@ const deleteBooking = factory.deleteOne(Booking);
 
 module.exports = {
   getCheckoutSession,
-  createBookingCheckout,
   getAllBookings,
   getBooking,
   createBooking,
   updateBooking,
   deleteBooking,
+  webhookChekout,
 };
