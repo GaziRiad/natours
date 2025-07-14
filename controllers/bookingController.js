@@ -26,7 +26,9 @@ const getCheckoutSession = catchAsync(async (req, res, next) => {
           product_data: {
             name: `${tour.name} Tour`,
             description: tour.summary,
-            images: [`https://natours.dev/img/tours/${tour.imageCover}`],
+            images: [
+              `${req.protocol}://${req.get("host")}/img/tours/${tour.imageCover}`,
+            ],
           },
           unit_amount: tour.price * 100,
         },
@@ -56,7 +58,7 @@ const webhookChekout = async (req, res, next) => {
       await Booking.create({
         tour: session.client_reference_id,
         user: user.id,
-        price: session.line_items[0].price_data.unit_amount / 100,
+        price: session.amount_total / 100,
       });
     }
 
